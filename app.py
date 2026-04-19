@@ -35,97 +35,84 @@ dose = st.text_input("Dose")
 
 if st.button("Generate Label + QR"):
 
-    img = Image.new("RGBA", (900, 1200), "#f7f7f7")
+    WIDTH, HEIGHT = 900, 1200
+    img = Image.new("RGBA", (WIDTH, HEIGHT), "#f7f7f7")
     draw = ImageDraw.Draw(img)
 
+    # Fonts (safe fallback)
     try:
         title_font = ImageFont.truetype("arial.ttf", 48)
-        bold_font = ImageFont.truetype("arialbd.ttf", 26)
-        normal_font = ImageFont.truetype("arial.ttf", 24)
-        small_font = ImageFont.truetype("arial.ttf", 20)
+        bold_font = ImageFont.truetype("arialbd.ttf", 28)
+        normal_font = ImageFont.truetype("arial.ttf", 26)
+        small_font = ImageFont.truetype("arial.ttf", 22)
     except:
-        title_font = bold_font = normal_font = small_font = None
+        title_font = bold_font = normal_font = small_font = ImageFont.load_default()
 
-    # Helper function for center alignment
-    def center_text(text, y, font, fill):
+    # Center helper
+    def center(text, y, font, color):
         bbox = draw.textbbox((0, 0), text, font=font)
-        text_width = bbox[2] - bbox[0]
-        x = (900 - text_width) // 2
-        draw.text((x, y), text, fill=fill, font=font)
+        x = (WIDTH - (bbox[2] - bbox[0])) // 2
+        draw.text((x, y), text, fill=color, font=font)
 
     y = 40
 
-    # ---------------- PRODUCT NAME (CENTERED RED) ---------------- #
-    center_text(product_name.upper(), y, title_font, "#d32f2f")
+    # ---------------- TITLE ---------------- #
+    center(product_name.upper(), y, title_font, "#d32f2f")
     y += 70
 
-    # ---------------- DESCRIPTION (CENTERED) ---------------- #
-    center_text(description, y, normal_font, "#333333")
-    y += 50
+    center(description, y, normal_font, "#444")
+    y += 60
 
     # ---------------- COMPOSITION ---------------- #
-    draw.text((50, y), "COMPOSITION", fill="#000000", font=bold_font)
-    y += 35
+    draw.text((60, y), "COMPOSITION", fill="black", font=bold_font)
+    y += 40
+
+    RIGHT = WIDTH - 80
 
     for comp in st.session_state.composition:
-        draw.text((50, y), comp["name"], fill="#222222", font=normal_font)
-        draw.text((750, y), f"{comp['value']:.2f}", fill="#000000", font=normal_font)
-        y += 30
+        name = comp["name"]
+        val = f"{comp['value']:.2f}"
+
+        draw.text((60, y), name, fill="#222", font=normal_font)
+
+        bbox = draw.textbbox((0, 0), val, font=normal_font)
+        draw.text((RIGHT - (bbox[2]-bbox[0]), y), val, fill="black", font=normal_font)
+
+        y += 35
 
     # Total
     y += 10
-    draw.text((50, y), "Total", fill="#000000", font=bold_font)
-    draw.text((750, y), f"{total:.2f}", fill="#000000", font=bold_font)
-    y += 50
+    draw.text((60, y), "Total", fill="black", font=bold_font)
 
-    # ---------------- CROP & DOSE ---------------- #
-    draw.text((50, y), "Name of the crop –", fill="#000000", font=bold_font)
-    draw.text((300, y), crop, fill="#333333", font=normal_font)
-    y += 35
+    total_text = f"{total:.2f}"
+    bbox = draw.textbbox((0, 0), total_text, font=bold_font)
+    draw.text((RIGHT - (bbox[2]-bbox[0]), y), total_text, fill="black", font=bold_font)
 
-    draw.text((50, y), "Doses:", fill="#000000", font=bold_font)
-    draw.text((200, y), dose, fill="#333333", font=normal_font)
+    y += 60
+
+    # ---------------- DETAILS ---------------- #
+    draw.text((60, y), "Name of the crop –", fill="black", font=bold_font)
+    draw.text((350, y), crop, fill="#333", font=normal_font)
     y += 40
 
-    # Agriculture line (bold + underline)
+    draw.text((60, y), "Doses:", fill="black", font=bold_font)
+    draw.text((200, y), dose, fill="#333", font=normal_font)
+    y += 50
+
+    # Agriculture line
     text = "(For Agriculture Use only)"
-    draw.text((50, y), text, fill="#000000", font=bold_font)
-    draw.line((50, y+28, 420, y+28), fill="black", width=1)
-    y += 50
+    draw.text((60, y), text, fill="black", font=bold_font)
+    draw.line((60, y+30, 450, y+30), fill="black", width=2)
+    y += 60
 
-    # Manufactured line (bold + underline)
+    # Manufactured line
     text2 = "Manufactured, Packed and Marketed by"
-    draw.text((50, y), text2, fill="#000000", font=bold_font)
-    draw.line((50, y+28, 600, y+28), fill="black", width=1)
-    y += 50
+    draw.text((60, y), text2, fill="black", font=bold_font)
+    draw.line((60, y+30, 700, y+30), fill="black", width=2)
+    y += 60
 
-    # ---------------- FIXED LOGO (BOTTOM RIGHT, PROPER RATIO) ---------------- #
-    try:
-        logo_img = Image.open("logo.png").convert("RGBA")
-
-        # Maintain aspect ratio
-        max_width = 220
-        ratio = max_width / logo_img.width
-        new_size = (int(logo_img.width * ratio), int(logo_img.height * ratio))
-
-        logo_img = logo_img.resize(new_size, Image.LANCZOS)
-
-        # Position: bottom-right with margin
-        x_pos = img.width - new_size[0] - 40
-        y_pos = img.height - new_size[1] - 40
-
-        # Transparent layer
-        temp = Image.new("RGBA", img.size, (255, 255, 255, 0))
-        temp.paste(logo_img, (x_pos, y_pos), logo_img)
-
-        # Merge
-        img = Image.alpha_composite(img.convert("RGBA"), temp).convert("RGB")
-
-    except Exception as e:
-        st.error(f"Logo error: {e}")
-
-    # Company Name
-    draw.text((50, y), "Puma Crop Care", fill="#000000", font=title_font)
+    # ---------------- COMPANY ---------------- #
+    draw.text((60, y), "Puma Crop Care", fill="black", font=title_font)
     y += 50
 
     manufacturer_lines = [
@@ -136,20 +123,41 @@ if st.button("Generate Label + QR"):
     ]
 
     for line in manufacturer_lines:
-        draw.text((50, y), line, fill="#333333", font=small_font)
-        y += 25
+        draw.text((60, y), line, fill="#444", font=small_font)
+        y += 28
+
+    # ---------------- LOGO (BOTTOM RIGHT) ---------------- #
+    try:
+        logo = Image.open("logo.png").convert("RGBA")
+
+        max_width = 220
+        ratio = max_width / logo.width
+        new_size = (int(logo.width * ratio), int(logo.height * ratio))
+        logo = logo.resize(new_size, Image.LANCZOS)
+
+        x = WIDTH - new_size[0] - 40
+        y_logo = HEIGHT - new_size[1] - 40
+
+        temp = Image.new("RGBA", img.size, (255, 255, 255, 0))
+        temp.paste(logo, (x, y_logo), logo)
+
+        img = Image.alpha_composite(img, temp)
+
+    except:
+        pass
 
     # ---------------- SAVE ---------------- #
     if not os.path.exists("output"):
         os.makedirs("output")
 
-    image_path = "output/label.jpg"
+    image_path = "output/label.png"
+    img = img.convert("RGB")
     img.save(image_path)
 
-    st.image(image_path, caption="Styled Label")
+    st.image(image_path, caption="Generated Label")
 
     # ---------------- QR ---------------- #
-    qr_data = f"http://localhost:8501/{image_path}"
+    qr_data = "https://your-app-name.streamlit.app"  # CHANGE AFTER DEPLOY
     qr = qrcode.make(qr_data)
 
     qr_path = "output/qr.png"
@@ -157,9 +165,9 @@ if st.button("Generate Label + QR"):
 
     st.image(qr_path, caption="QR Code")
 
-    # Download buttons
+    # Downloads
     with open(image_path, "rb") as f:
-        st.download_button("Download Label", f, "label.jpg")
+        st.download_button("Download Label", f, "label.png")
 
     with open(qr_path, "rb") as f:
         st.download_button("Download QR", f, "qr.png")
